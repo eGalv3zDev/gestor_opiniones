@@ -10,8 +10,10 @@ import { dbConnection } from './db.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { errorHandler } from '../middlewares/handle-errors.js';
-import User from '../src/users/user.model.js';
-import crypto from 'crypto';
+import postRoutes from '../src/posts/post.routes.js';
+import commentsRoutes from '../src/Comments/comment.routes.js';
+import userRoutes from '../src/Users/user.routes.js';
+import User from '../src/Users/user.model.js';
 import jwt from 'jsonwebtoken';
 
 const BASE_URL = '/kinalOpinion/v1';
@@ -20,21 +22,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta';
 // -------------------------
 // Funciones de autenticación
 // -------------------------
-const hashPassword = (password) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, 'sha256')
-        .toString('hex');
-    return `${salt}:${hash}`;
-};
-
-const verifyPassword = (password, stored) => {
-    const [salt, originalHash] = stored.split(':');
-    const hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, 'sha256')
-        .toString('hex');
-    return hash === originalHash;
-};
 
 const generateToken = (user) => {
     return jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
@@ -68,6 +55,12 @@ const middlewares = (app) => {
     app.use(morgan('dev'));
 };
 
+const routes = (app) => {
+    app.use(`${BASE_URL}/posts`, postRoutes);
+    app.use(`${BASE_URL}/comments`, commentsRoutes );
+    app.use(`${BASE_URL}/users`, userRoutes);
+}
+
 // -------------------------
 // Inicialización del servidor
 // -------------------------
@@ -79,6 +72,7 @@ const initServer = async (app) => {
     try {
         dbConnection();
         middlewares(app);
+        routes(app); // Monta las rutas
 
         // -------------------------
         // Rutas
@@ -105,8 +99,7 @@ const initServer = async (app) => {
                 const existingUser = await User.findOne({ email });
                 if (existingUser) return res.status(400).json({ msg: 'Usuario ya registrado' });
 
-                const hashedPassword = hashPassword(password);
-                const newUser = new User({ username, email, password: hashedPassword });
+                const newUser = new User({ username, email, password });
                 await newUser.save();
 
                 const token = generateToken(newUser);
@@ -124,13 +117,9 @@ const initServer = async (app) => {
             if (!email || !password) {
                 return res.status(400).json({ msg: 'Todos los campos son obligatorios' });
             }
-
             try {
                 const user = await User.findOne({ email });
                 if (!user) return res.status(400).json({ msg: 'Usuario no encontrado' });
-
-                const isValid = verifyPassword(password, user.password);
-                if (!isValid) return res.status(400).json({ msg: 'Contraseña incorrecta' });
 
                 const token = generateToken(user);
                 res.json({ token, user: { id: user._id, username: user.username, email } });

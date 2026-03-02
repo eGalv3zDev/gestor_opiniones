@@ -22,9 +22,15 @@ export const updatePost = async (req, res) => {
     const { title, category, content } = req.body;
 
     const post = await Post.findById(id);
-    if (!post) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
-    if (post.author.toString() !== req.user.id)
+    if (!post) 
+      return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+
+    // Comparación segura de ObjectId con string usando equals()
+    if (!post.author.equals(req.user.id)) {
+      console.log('post.author:', post.author);
+      console.log('req.user.id:', req.user.id);
       return res.status(403).json({ success: false, message: 'No puedes editar esta publicación' });
+    }
 
     if (title) post.title = title;
     if (category) post.category = category;
@@ -35,6 +41,7 @@ export const updatePost = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Publicación actualizada', data: post });
   } catch (error) {
+    console.error('Error en updatePost:', error);
     res.status(500).json({ success: false, message: 'Error al actualizar publicación', error: error.message });
   }
 };
@@ -46,13 +53,19 @@ export const deletePost = async (req, res) => {
 
     const post = await Post.findById(id);
     if (!post) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
-    if (post.author.toString() !== req.user.id)
-      return res.status(403).json({ success: false, message: 'No puedes eliminar esta publicación' });
 
-    await post.remove();
+    // Comparación segura ObjectId vs string
+    if (!post.author.equals(req.user.id)) {
+      console.log('post.author:', post.author);
+      console.log('req.user.id:', req.user.id);
+      return res.status(403).json({ success: false, message: 'No puedes eliminar esta publicación' });
+    }
+
+    await post.deleteOne();
 
     res.status(200).json({ success: true, message: 'Publicación eliminada' });
   } catch (error) {
+    console.error('Error en deletePost:', error);
     res.status(500).json({ success: false, message: 'Error al eliminar publicación', error: error.message });
   }
 };

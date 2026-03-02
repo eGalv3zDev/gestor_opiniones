@@ -3,11 +3,10 @@ import Comment from './comment.model.js';
 // Crear comentario
 export const createComment = async (req, res) => {
   try {
-    const { postId, content } = req.body;
+    const { post, content } = req.body;
     const author = req.user.id;
 
-    const comment = new Comment({ post: postId, author, content });
-    await comment.save();
+    const comment = new Comment({ post, author, content });
 
     res.status(201).json({ success: true, message: 'Comentario creado', data: comment });
   } catch (error) {

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import User from '../modules/users/user.model.js';
+import User from '../src/Users/user.model.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta';
 
 // Middleware para proteger rutas
 export const authMiddleware = async (req, res, next) => {
